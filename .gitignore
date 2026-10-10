@@ -1,0 +1,9 @@
+# Internal working files, never uploaded
+PUBLIC-PROGRESS.md
+secret-scan-proof.txt
+
+# Build outputs
+dist/
+node_modules/
+artifacts/
+*.log

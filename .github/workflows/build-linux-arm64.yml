@@ -1,0 +1,80 @@
+name: Build Linux arm64
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-arm64:
+    name: Build ZCode v3.14.3 (linux arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - name: Checkout ZCode source (v3.14.3)
+        uses: actions/checkout@v4
+        with:
+          repository: zai-org/ZCode
+          ref: v3.14.3
+          path: ZCode
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm libarchive-tools
+
+      - name: Setup Node.js 24.14.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+
+      - name: Setup pnpm 10.33.2
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Bootstrap
+        working-directory: ZCode
+        run: pnpm bootstrap
+
+      - name: Bundle desktop (linux arm64)
+        working-directory: ZCode
+        run: pnpm bundle:desktop -- --os linux --arch arm64
+
+      - name: Build headless distribution
+        working-directory: ZCode
+        run: |
+          pnpm build:zcode --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/deps/zcode/"
+
+      - name: Collect artifacts and checksums
+        run: |
+          mkdir -p artifacts
+          cp ZCode/packages/desktop/dist/*arm64*.AppImage artifacts/ 2>/dev/null || true
+          cp ZCode/packages/desktop/dist/*arm64*.deb artifacts/ 2>/dev/null || true
+          cp ZCode/packages/desktop/dist/*arm64*.rpm artifacts/ 2>/dev/null || true
+          cp ZCode/packages/desktop/dist/*arm64*.pkg.tar.zst artifacts/ 2>/dev/null || true
+          cp ZCode/dist/zcode/releases/*/zcode-*.tar.gz artifacts/ 2>/dev/null || true
+          ls -la artifacts/
+          (cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zcode-linux-arm64
+          path: artifacts/
+          if-no-files-found: error
+
+      - name: Create GitHub release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "ZCode ${{ github.ref_name }} (linux arm64)" \
+            --notes "Reproducible build of vanilla zai-org/ZCode v3.14.3 source on ubuntu-24.04-arm. See SHA256SUMS.txt for checksums." \
+            artifacts/*
