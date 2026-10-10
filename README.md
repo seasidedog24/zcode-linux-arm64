@@ -26,11 +26,15 @@
 
 <!-- SHA256-TABLE -->
 
-哈希表见对应 Release 的 notes 与资产旁的 `SHA256SUMS.txt`；headless 包基准哈希：
+| 文件 | SHA-256 |
+| --- | --- |
+| `ZCode-3.14.3-arm64.AppImage` | `49befe7528b26c8f5e8a414781e5976c2e892fcd4e2a0d96144f0a39f80b3136` |
+| `ZCode-3.14.3-arm64.deb` | `6e13c3ec0a40d5ff0d918094674c5027ffb645ae499265157ef27caed29c225d` |
+| `ZCode-3.14.3-aarch64.rpm` | `eda2b1124c930b9a24c18879c77f9eb5e14e71a59c0573de1c7091e49e982399` |
+| `ZCode-3.14.3-aarch64.pkg.tar.zst` | `8310acac5b6240b0f7106c36f7362e4b10697189faacbb60cede9fd033093d7d` |
+| `zcode-headless-3.14.3-linux-arm64.tar.gz` | `7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6` |
 
-```
-7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6  zcode-headless-3.14.3-linux-arm64.tar.gz
-```
+Release notes 中亦有构建环境说明。
 
 ## 构建步骤（手动）
 
