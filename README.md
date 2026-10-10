@@ -18,9 +18,9 @@
 | --- | --- | --- |
 | `ZCode-3.14.3-arm64.AppImage` | AppImage | 大多数发行版（需 libfuse2，或解包运行） |
 | `ZCode-3.14.3-arm64.deb` | deb | Debian / Ubuntu 24.04+ (arm64) |
-| `ZCode-3.14.3-arm64.rpm` | rpm | RHEL 8+ / Rocky / Fedora (aarch64) |
-| `ZCode-3.14.3-arm64.pkg.tar.zst` | pacman | Arch Linux ARM / Manjaro ARM |
-| `zcode-3.14.3-arm64-headless.tar.gz` | tarball | headless / 服务器场景（无 GUI 依赖） |
+| `ZCode-3.14.3-aarch64.rpm` | rpm | RHEL 8+ / Rocky / Fedora (aarch64) |
+| `ZCode-3.14.3-aarch64.pkg.tar.zst` | pacman | Arch Linux ARM / Manjaro ARM |
+| `zcode-headless-3.14.3-linux-arm64.tar.gz` | tarball | headless / 服务器场景（无 GUI 依赖） |
 
 ### SHA-256
 
@@ -29,7 +29,7 @@
 哈希表见对应 Release 的 notes 与资产旁的 `SHA256SUMS.txt`；headless 包基准哈希：
 
 ```
-7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6  zcode-3.14.3-arm64-headless.tar.gz
+7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6  zcode-headless-3.14.3-linux-arm64.tar.gz
 ```
 
 ## 构建步骤（手动）
