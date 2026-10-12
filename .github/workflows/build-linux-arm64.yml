@@ -48,6 +48,10 @@ jobs:
       - name: Build headless distribution
         working-directory: ZCode
         run: |
+          # packages/{shared,services,client} 没有独立 build 脚本,其 dist 由根
+          # typecheck(tsc -b,composite 工程)真实产出;build:zcode 的 TUI 运行时
+          # 闭包收集器缺它们会报 "Missing @zcode/shared dist files"。
+          pnpm typecheck
           pnpm build:zcode --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/deps/zcode/"
 
       - name: Collect artifacts and checksums
