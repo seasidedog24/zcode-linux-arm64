@@ -1,130 +1,107 @@
-# ZCode Linux arm64 (aarch64) Builds
+# ZCode for Linux on ARM64
 
-> **English summary:** This repository provides fully reproducible Linux arm64 (aarch64) builds of the **vanilla, unmodified** [ZCode](https://github.com/zai-org/ZCode) open-source editor (v3.14.3), including all four desktop package formats (AppImage, .deb, .rpm, .pacman / pkg.tar.zst) plus the headless CLI tarball — a combination not offered by the official download site. It also ships a GitHub Actions workflow that rebuilds everything from source on the free `ubuntu-24.04-arm` runner, and a build guide covering China-network mirror workarounds and Ubuntu 24.04 pitfalls (SUID sandbox, AppImage extraction). This is an **unofficial community project**; all credit and copyright belong to Z.AI, released under Apache-2.0.
+[![CI](https://github.com/seasidedog24/zcode-linux-arm64/actions/workflows/build-linux-arm64.yml/badge.svg)](https://github.com/seasidedog24/zcode-linux-arm64/actions/workflows/build-linux-arm64.yml)
+[![Release](https://img.shields.io/badge/release-v3.14.3--arm64-blue)](https://github.com/seasidedog24/zcode-linux-arm64/releases/tag/v3.14.3-arm64)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+
+Unofficial, **fully reproducible** builds of [ZCode](https://github.com/zai-org/ZCode) — Z.ai's open-source agentic coding workbench — for **Linux aarch64**, produced from the **unmodified vanilla source** with a one-click GitHub Actions pipeline on free `ubuntu-24.04-arm` runners.
+
+> ZCode (Apache-2.0, © Z.ai) officially distributes desktop installers for macOS and Windows on GitHub Releases. The public source supports `--os linux --arch arm64` end to end, but no official Linux artifacts are published on GitHub. This repo fills that gap for ARM64 Linux machines (NVIDIA DGX Spark, ARM servers, Raspberry Pi-class SBCs with enough RAM, etc.), and adds a **headless web distribution** that even the official Linux Beta does not ship.
+
+[中文说明](#中文说明)
+
+## Artifacts (v3.14.3)
+
+| Artifact | Format | Size | sha256 (first 16) |
+|---|---|---|---|
+| `ZCode-3.14.3-arm64.AppImage` | AppImage (desktop GUI) | 182 MiB | `49befe7528b26c8f` |
+| `ZCode-3.14.3-arm64.deb` | Debian/Ubuntu package | 128 MiB | `6e13c3ec0a40d5ff` |
+| `ZCode-3.14.3-aarch64.rpm` | Fedora/RHEL package | 106 MiB | `eda2b1124c930b9a` |
+| `ZCode-3.14.3-aarch64.pkg.tar.zst` | Arch Linux package | 107 MiB | `8310acac5b6240b0` |
+| `zcode-headless-3.14.3-linux-arm64.tar.gz` | Headless CLI / Web runtime | 78 MiB | `7146c8e5127edc9c` |
+
+Full checksums: [SHA256SUMS-verified.txt](SHA256SUMS-verified.txt) · Download: [Releases](https://github.com/seasidedog24/zcode-linux-arm64/releases)
+
+## Verified on real hardware
+
+Everything below was exercised end-to-end on an **NVIDIA DGX Spark (GB10 Grace-Blackwell, Ubuntu 24.04, 4K display)** — not just packaged:
+
+- **Desktop GUI**: welcome/onboarding, Z.AI & BigModel account login, workspace management, remote-control QR pairing (colleagues join the same workspace from a phone/laptop via `zcode.z.ai/remote`), Feishu/Lark bot channel binding.
+- **Headless web** (`zcode --web`): session create/resume with full persistence across restarts, streaming replies, image input via vision models, file and terminal tools driven through the WebSocket RPC protocol.
+- **Parity testing**: an 8-item functional matrix against the official website's Linux Beta (v3.14.5) passed on all counts; the differences found were version lags, not defects (see "Findings" below).
+
+## Quick start
+
+### Desktop (AppImage, Ubuntu 24.04)
+
+Ubuntu ≥ 23.10 restricts unprivileged user namespaces, which breaks Electron's SUID sandbox inside AppImage mounts. Extract and fix once:
+
+```bash
+chmod +x ZCode-3.14.3-arm64.AppImage
+./ZCode-3.14.3-arm64.AppImage --appimage-extract
+sudo chown root:root squashfs-root/chrome-sandbox
+sudo chmod 4755 squashfs-root/chrome-sandbox
+./squashfs-root/zcode
+```
+
+### Headless web (no GUI, remote access from any browser)
+
+Requires Node.js 24 on `PATH` (matching upstream `mise.toml`).
+
+```bash
+tar -xzf zcode-headless-3.14.3-linux-arm64.tar.gz
+node zcode/bin/zcode.mjs --web --workspace /path/to/project --host 0.0.0.0 --port 3031 --no-open
+```
+
+Listening on a non-loopback address auto-generates an access token; the console prints the ready-to-share URL.
+
+## Reproduce the build
+
+One click: **Actions → "Build Linux arm64" → Run workflow** (GitHub's free ARM64 runners, ~40 min), or push a `v*` tag to build and publish a release automatically. Or build locally from vanilla source:
+
+```bash
+git clone https://github.com/zai-org/ZCode && cd ZCode
+pnpm bootstrap
+pnpm bundle:desktop -- --os linux --arch arm64        # desktop artifacts
+pnpm typecheck && pnpm build:zcode --base-url <url>   # headless runtime
+```
+
+System deps: Node 24.14.0, pnpm 10.33.2, `rpm`, `libarchive-tools`.
+
+### Build findings (documented so you don't have to rediscover them)
+
+1. `pnpm typecheck` must run before `build:zcode` — `packages/{shared,services,client}` have no build scripts; their `dist/` is emitted by the composite `tsc -b` pass that the TUI runtime closure collector requires.
+2. On networks where `electronjs.org` is unreachable, pre-seed `~/.electron-gyp/<ver>/` with the headers tarball (extract so that `include/node/` sits directly under the version dir). Mirror `SHASUMS256.txt` files lack the headers entry, so `--dist-url` mirror overrides fail checksum validation.
+3. `pnpm bootstrap` runs `git submodule update` — build from a real git checkout, not a source tarball.
+4. AppImages need the SUID sandbox fix above on Ubuntu 24.04.
+
+## How this compares
+
+| | This repo | Official site (Linux Beta) | [ZCodium](https://github.com/ZCodium-project/ZCodium) | AUR `zcode` |
+|---|---|---|---|---|
+| Source | vanilla `zai-org/ZCode` v3.14.3 | official v3.14.5 (source not public) | fork with de-telemetry patches | repack of official deb |
+| ARM64 desktop | ✅ all 4 package formats | ✅ 3 formats | ✅ AppImage | ✅ |
+| Headless web runtime | ✅ | ❌ | ✅ (assets) | ❌ |
+| Reproducible CI | ✅ GitHub Actions (arm64 runner) | ❌ | ✅ | ✅ (PKGBUILD) |
+
+## Findings worth reporting upstream
+
+- `readSessionMessages` / `readSessionEvents` RPC responses fail their own Zod schema validation in v3.14.3 (affects web-mode session readers).
+- The official v3.14.5 Linux package's bundled CLI needs a `resources/glm/provider → resources/config/provider` symlink fix before it starts.
+- The upstream repository (zai-org/ZCode) currently has PR creation closed for outside contributors (verified via both GraphQL and REST APIs); this repo exists partly because of that.
+
+## Disclaimer
+
+This is an unofficial community build, not affiliated with or endorsed by Z.ai. ZCode is Apache-2.0, © Z.ai; upstream third-party notices apply. No API keys, credentials, or session data are ever included in this repository or its releases.
 
 ---
 
-## 项目定位
+## 中文说明
 
-- **vanilla 源码，零改动构建**：本仓库所有产物均直接从 [zai-org/ZCode](https://github.com/zai-org/ZCode) 官方开源源码 `v3.14.3` tag 构建，未修改任何业务代码（构建网络适配见下文「中国网络环境」节，均不影响产物行为）。
-- **补齐 arm64 格式空缺**：官方下载页目前只提供 Linux x64 与 arm64 Beta 的部分格式；本仓库提供 **aarch64 全部四种桌面格式 + headless tarball** 共 5 个产物。
-- **CI 可复现**：附带的 GitHub Actions workflow 在免费 `ubuntu-24.04-arm` runner 上从源码完整重建全部产物，任何人都可以 fork 后自行验证或构建其他版本。
+[ZCode](https://github.com/zai-org/ZCode) 是智谱 Z.ai 开源的 AI 编程工作台(Apache-2.0)。官方在 GitHub 只发布 macOS / Windows 安装包,本仓库用**未经改动的官方源码(v3.14.3)** 构建 Linux aarch64 全套产物,并通过 GitHub Actions 免费 arm64 runner 实现**一键可复现构建**。
 
-## 产物清单
-
-见 [Releases](https://github.com/seasidedog24/zcode-linux-arm64/releases)。
-
-| 产物 | 格式 | 适用系统 |
-| --- | --- | --- |
-| `ZCode-3.14.3-arm64.AppImage` | AppImage | 大多数发行版（需 libfuse2，或解包运行） |
-| `ZCode-3.14.3-arm64.deb` | deb | Debian / Ubuntu 24.04+ (arm64) |
-| `ZCode-3.14.3-aarch64.rpm` | rpm | RHEL 8+ / Rocky / Fedora (aarch64) |
-| `ZCode-3.14.3-aarch64.pkg.tar.zst` | pacman | Arch Linux ARM / Manjaro ARM |
-| `zcode-headless-3.14.3-linux-arm64.tar.gz` | tarball | headless / 服务器场景（无 GUI 依赖） |
-
-### SHA-256
-
-<!-- SHA256-TABLE -->
-
-| 文件 | SHA-256 |
-| --- | --- |
-| `ZCode-3.14.3-arm64.AppImage` | `49befe7528b26c8f5e8a414781e5976c2e892fcd4e2a0d96144f0a39f80b3136` |
-| `ZCode-3.14.3-arm64.deb` | `6e13c3ec0a40d5ff0d918094674c5027ffb645ae499265157ef27caed29c225d` |
-| `ZCode-3.14.3-aarch64.rpm` | `eda2b1124c930b9a24c18879c77f9eb5e14e71a59c0573de1c7091e49e982399` |
-| `ZCode-3.14.3-aarch64.pkg.tar.zst` | `8310acac5b6240b0f7106c36f7362e4b10697189faacbb60cede9fd033093d7d` |
-| `zcode-headless-3.14.3-linux-arm64.tar.gz` | `7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6` |
-
-Release notes 中亦有构建环境说明。
-
-## 构建步骤（手动）
-
-构建机：Linux arm64（或 qumu/容器内 arm64），Ubuntu 24.04 实测通过。
-
-系统依赖：
-
-```bash
-sudo apt-get update
-sudo apt-get install -y rpm libarchive-tools git
-# 仅运行 AppImage 需要：
-sudo apt-get install -y libfuse2
-```
-
-- Node.js **24.14.0**
-- pnpm **10.33.2**（源码 `package.json` 的 `packageManager` 字段锁定）
-
-```bash
-git clone --branch v3.14.3 https://github.com/zai-org/ZCode.git
-cd ZCode
-pnpm bootstrap
-pnpm bundle:desktop -- --os linux --arch arm64
-pnpm build:zcode --base-url https://example.com/zcode/deps/zcode/
-```
-
-产物位置：
-
-- 桌面四种格式：`packages/desktop/dist/`
-- headless tarball：`dist/zcode/releases/<version>/zcode-<version>.tar.gz`（同目录有 `sha256.txt`）
-
-## CI 构建（推荐）
-
-`.github/workflows/build-linux-arm64.yml`：
-
-- 触发：推送 `v*` tag，或手动 `workflow_dispatch`
-- Runner：GitHub 免费 `ubuntu-24.04-arm`
-- 步骤：checkout v3.14.3 源码 → 装依赖 → `pnpm bootstrap` → `pnpm bundle:desktop -- --os linux --arch arm64` → `pnpm build:zcode` → 上传 artifact；tag 推送时自动 `gh release create` 挂全部产物
-
-注意：`pnpm bootstrap` 内部会执行 `git submodule update`，因此**必须使用真实 git checkout**，官方 release tarball 会导致该步骤失败。
-
-## 中国网络环境
-
-在境内网络构建时，两处网络适配实测有效（均不影响产物本身，非必须）：
-
-1. **Electron 二进制下载**：`packages/desktop/scripts/node-pty-rebuild.mjs` 中 electron-rebuild 需要下载 Electron 41.0.3 的 headers。npmmirror 镜像的 `SHASUMS256.txt` 缺 headers 条目，导致校验值拿到 `undefined` 而失败。两种解法（实测用后者）：
-   - 给 electron-rebuild 加参数 `--dist-url https://npmmirror.com/mirrors/electron/`；
-   - 或预先放置官方 headers 缓存 `~/.electron-gyp/41.0.3/`，跳过下载。
-2. **npm registry**：项目根 `.npmrc` 的 registry 换成 `https://registry.npmmirror.com`，仅为绕开境外限速。
-
-GitHub Actions 的 runner 网络良好，CI 中不需要以上任何适配。
-
-## Ubuntu 24.04 已知坑
-
-### SUID sandbox
-
-Ubuntu 24.04 对非特权 user namespace 有 AppArmor 限制，Electron 的 chrome-sandbox 如果没有 SUID 位会启动失败，报错类似：
-
-```
-The SUID sandbox helper binary was found, but is not configured correctly.
-```
-
-两种解法：
-
-```bash
-# 解法一：给 chrome-sandbox 加 SUID（需要 root，deb/rpm/pacman 安装后路径）
-sudo chown root:root /opt/ZCode/chrome-sandbox
-sudo chmod 4755 /opt/ZCode/chrome-sandbox
-
-# 解法二：临时关闭 sandbox 启动（仅自用/受控环境）
-zcode --no-sandbox
-```
-
-### AppImage 运行
-
-AppImage 依赖 FUSE：
-
-```bash
-sudo apt-get install -y libfuse2
-./ZCode-3.14.3-arm64.AppImage
-```
-
-没有 FUSE（容器 / 最小系统）时解包运行：
-
-```bash
-./ZCode-3.14.3-arm64.AppImage --appimage-extract
-./squashfs-root/AppRun
-```
-
-## 免责声明
-
-- 本仓库是**非官方社区项目**，与 Z.ai 无隶属关系。
-- ZCode 的全部版权归 **Z.AI Co., Ltd** 所有，源码与产物遵循 **Apache-2.0** 许可证（见 [LICENSE](LICENSE)）。
-- 产物从官方 v3.14.3 源码零改动构建，但不提供任何担保（as-is）；生产使用请自行验证。
+- **产物**:AppImage / deb / rpm / pacman 四种桌面格式 + 无头 CLI/Web 运行包(官方 Linux Beta 没有的形态),全部附 sha256。
+- **真机验证**:在 NVIDIA DGX Spark(GB10,Ubuntu 24.04)上完成 GUI 登录、二维码远控、飞书 Bot 绑定、无头 Web 会话持久化/流式/图像输入/文件与终端工具的端到端验证;与官方 Linux Beta 3.14.5 的 8 项功能对比全部通过。
+- **技术要点**:`typecheck` 须在 `build:zcode` 前运行、受限网络下 electron headers 的缓存预装法、Ubuntu 24.04 的 SUID 沙箱修复等,详见英文部分 "Build findings"。
+- **定位差异**:官方 Beta 源码不公开、ZCodium 是去遥测 fork、AUR 是重打包——本仓库是唯一的 vanilla 源码 + aarch64 全格式 + headless + 可复现 CI 组合。
+- 本构建非官方产物,与 Z.ai 无关联;仓库与发布物中不含任何密钥或会话数据。

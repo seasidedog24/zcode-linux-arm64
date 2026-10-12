@@ -1,0 +1,6 @@
+# 2026-10-10 双端校验通过(Spark 端与 Mac 端逐一比对一致;headless 另与构建日志基准一致)
+8310acac5b6240b0f7106c36f7362e4b10697189faacbb60cede9fd033093d7d  ZCode-3.14.3-aarch64.pkg.tar.zst
+eda2b1124c930b9a24c18879c77f9eb5e14e71a59c0573de1c7091e49e982399  ZCode-3.14.3-aarch64.rpm
+49befe7528b26c8f5e8a414781e5976c2e892fcd4e2a0d96144f0a39f80b3136  ZCode-3.14.3-arm64.AppImage
+6e13c3ec0a40d5ff0d918094674c5027ffb645ae499265157ef27caed29c225d  ZCode-3.14.3-arm64.deb
+7146c8e5127edc9c980cfa29911b618ad127870219a3d33a28724174b17044f6  zcode-headless-3.14.3-linux-arm64.tar.gz
